@@ -1,0 +1,63 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+sparqlhelper - Simplify SparQL query formulation on the command line.
+
+C<sparqlhelper> uses the given sparql where clause to construct a
+complete query, by selecting distinct values for all not repeated
+variable names longer than one char in the where clause. So the query
+C<?s a ?class> selects and outputs all distinct classes in the data
+set.
+
+The complete sparql query is per default just output to stdout, but
+can be directly passed on to arq for convenience. This is enabled by
+passing some arq options like C<--data> or C<--service> to the command
+line.
+
+=head1 SYNOPSIS
+
+sparqlhelper [OPTIONS] QUERY
+
+=head1 OPTIONS
+
+ --help|-h      brief help message
+ --data|-d      data file to use (passed on to arq)
+ --service|-s   service endpoint to use (passed on to arq)
+
+=head1 AUTHOR
+
+ Nathan Gass <gass@search.ch>
+
+=cut
+
+use strict;
+use warnings;
+use v5.010;
+
+use Getopt::Long qw/:config/;
+use YAML;
+
+my $opts = {};
+GetOptions(
+	$opts,
+	'help|h', 'data|d=s', 'service|s=s',
+	) or pod2usage(2);
+
+my $query = shift // pod2usage(2);
+my @vars = ($query =~ m/\?\w+/g);
+my %counts;
+$counts{$_}++ foreach @vars;
+my $select = join " ", grep {length($_) > 2 && $counts{$_} == 1} @vars;
+my $result = "SELECT DISTINCT $select WHERE { $query }";
+
+if ($opts->{data} || $opts->{service}) {
+	my @args;
+	foreach my $key (qw/data service/) {
+		push @args, '--' . $key, $opts->{$key} if $opts->{$key};
+	}
+	system('arq', @args, $result);
+} else {
+	say $result;
+}
+
