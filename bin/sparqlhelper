@@ -80,7 +80,7 @@ my $select = join " ", grep {length($_) > 2 && $counts{$_} == 1} @vars;
 my $result =
 	join("\n", map {"PREFIX $_: <" . $prefixmap{$_} . ">"} keys %prefixmap)
 	. (%prefixmap ? "\n" : '')
-	. "SELECT DISTINCT $select WHERE { $query }";
+	. "SELECT DISTINCT $select WHERE { $query } ORDER BY $select";
 
 if ($opts->{data} || $opts->{service}) {
 	my @args;
