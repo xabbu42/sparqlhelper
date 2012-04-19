@@ -38,7 +38,8 @@ use v5.010;
 use Getopt::Long qw/:config/;
 use List::MoreUtils qw/uniq/;
 use YAML;
-use DB_File;
+use Pod::Usage;
+use LWP::Simple qw/mirror/;
 
 my $opts = {};
 GetOptions(
@@ -48,22 +49,31 @@ GetOptions(
 
 my $query = shift // pod2usage(2);
 
+my %prefixmap;
+my $path = $ENV{HOME} . '/.sparqlhelper.prefix.cc';
+mirror('http://prefix.cc/popular/all', $path);
+my @matches = (`cat $path` =~ /resource="([^"]+)".*?href="([^"]+)"/g);
+while (@matches) {
+	my $uri    = shift @matches;
+	my $prefix = shift @matches;
+	$prefixmap{$prefix} = $uri;
+}
+
 my @vars = ($query =~ m/\?\w+/g);
-my @prefixes = map {s/://; $_} uniq ($query =~ m/\b\w+:/g);
-tie my %uri => 'DB_File', $ENV{HOME} . '/.sparqlhelper.cache.db';
-foreach my $prefix (@prefixes) {
-	if (!$uri{$prefix}) {
-		$uri{$prefix} = `curl --silent http://prefix.cc/$prefix.file.txt | head -1 | cut -f2`;
-		chomp $uri{$prefix};
+if (!$opts->{data} && !$opts->{service}) {
+	my %used = map {s/://; $_ => 1} ($query =~ m/\b\w+:/g);
+	foreach my $key (keys %prefixmap) {
+		delete $prefixmap{$key} unless $used{$key};
 	}
 }
+
 my %counts;
 $counts{$_}++ foreach @vars;
 
 my $select = join " ", grep {length($_) > 2 && $counts{$_} == 1} @vars;
 my $result =
-	join ("\n", map {"PREFIX $_: <" . $uri{$_} . ">"} @prefixes)
-	. (@prefixes ? "\n" : '')
+	join("\n", map {"PREFIX $_: <" . $prefixmap{$_} . ">"} keys %prefixmap)
+	. (%prefixmap ? "\n" : '')
 	. "SELECT DISTINCT $select WHERE { $query }";
 
 if ($opts->{data} || $opts->{service}) {
