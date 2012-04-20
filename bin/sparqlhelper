@@ -15,16 +15,17 @@ The complete sparql query is per default just output to stdout, but
 can be directly passed on to arq for convenience. This is enabled by
 passing some arq options like C<--data> or C<--service> to the command
 line. In this case, also all known prefixes from prefix.cc are added
-to the query.
+to the query to simplify the output.
 
 =head1 SYNOPSIS
 
 sparqlhelper [OPTIONS] QUERY
 
- --help|-h      Brief help message
- --data|-d      Data file to use (passed on to arq)
- --service|-s   Service endpoint to use (passed on to arq)
- --prefix|-p    Add a prefix to the query in the form prefix=uri.
+ --help,-h      Brief help message.
+ --ask,-a       Use ask instead of select query.
+ --data,-d      Data file to use (passed on to arq).
+ --service,-s   Service endpoint to use (passed on to arq).
+ --prefix,-p    Add a prefix to the query in the form prefix=uri.
                 Known prefixes from prefix.cc are recognized instead 
                 of a uri.
 
@@ -48,7 +49,7 @@ use LWP::Simple qw/mirror/;
 my $opts = {};
 GetOptions(
 	$opts,
-	'help|h', 'data|d=s', 'service|s=s', 'prefix|p=s%',
+	'help|h', 'ask|a', 'data|d=s', 'service|s=s', 'prefix|p=s%',
 	) or pod2usage(2);
 pod2usage() if $opts->{help};
 
@@ -80,7 +81,8 @@ my $select = join " ", grep {length($_) > 2 && $counts{$_} == 1} @vars;
 my $result =
 	join("\n", map {"PREFIX $_: <" . $prefixmap{$_} . ">"} keys %prefixmap)
 	. (%prefixmap ? "\n" : '')
-	. "SELECT DISTINCT $select WHERE { $query } ORDER BY $select";
+	. ($opts->{ask} ? "ASK" : "SELECT DISTINCT $select")
+	. " WHERE { $query } ORDER BY $select";
 
 if ($opts->{data} || $opts->{service}) {
 	my @args;
