@@ -101,7 +101,7 @@ my $select = join " ", grep {length($_) > 2 && $counts{$_} == 1} @vars;
 my $fullquery =
 	join("\n", map {"PREFIX $_: <" . $prefixmap{$_} . ">"} keys %prefixmap)
 	. (%prefixmap ? "\n" : '')
-	. ($opts->{ask} ? "ASK" : "SELECT DISTINCT $select")
+	. ($opts->{ask} || !$select ? "ASK" : "SELECT DISTINCT $select")
 	. " WHERE { $query }"
 	#. " ORDER BY $select" # Removed because of speed
 	;
