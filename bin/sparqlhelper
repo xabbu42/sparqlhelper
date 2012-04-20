@@ -23,6 +23,7 @@ sparqlhelper [OPTIONS] QUERY
 
  --help,-h      Brief help message.
  --ask,-a       Use ask instead of select query.
+ --explain,-e   Explain and log query execution.
  --data,-d      Data file to use (passed on to arq).
  --service,-s   Service endpoint to use (passed on to arq).
  --prefix,-p    Add a prefix to the query in the form prefix=uri.
@@ -49,7 +50,7 @@ use LWP::Simple qw/mirror/;
 my $opts = {};
 GetOptions(
 	$opts,
-	'help|h', 'ask|a', 'data|d=s', 'service|s=s', 'prefix|p=s%',
+	'help|h', 'ask|a', 'data|d=s', 'service|s=s', 'prefix|p=s%', 'explain|e',
 	) or pod2usage(2);
 pod2usage() if $opts->{help};
 
@@ -89,6 +90,7 @@ if ($opts->{data} || $opts->{service}) {
 	foreach my $key (qw/data service/) {
 		push @args, '--' . $key, $opts->{$key} if $opts->{$key};
 	}
+	push @args, '--explain' if $opts->{explain};
 	exec($opts->{service} ? 'rsparql' : 'sparql', @args, $result);
 } else {
 	say $result;
