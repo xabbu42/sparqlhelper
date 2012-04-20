@@ -98,7 +98,7 @@ my %counts;
 $counts{$_}++ foreach @vars;
 
 my $select = join " ", grep {length($_) > 2 && $counts{$_} == 1} @vars;
-my $result =
+my $fullquery =
 	join("\n", map {"PREFIX $_: <" . $prefixmap{$_} . ">"} keys %prefixmap)
 	. (%prefixmap ? "\n" : '')
 	. ($opts->{ask} ? "ASK" : "SELECT DISTINCT $select")
@@ -110,8 +110,8 @@ if ($cmdkey) {
 	my (@args, $cmd);
 	push @args, '--' . $cmdkey, $opts->{$cmdkey};
 	push @args, '--explain' if $opts->{explain};
-	exec($cmds{$cmdkey}, @args, $result);
+	exec($cmds{$cmdkey}, @args, $fullquery);
 } else {
-	say $result;
+	say $fullquery;
 }
 
