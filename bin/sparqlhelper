@@ -102,7 +102,9 @@ my $result =
 	join("\n", map {"PREFIX $_: <" . $prefixmap{$_} . ">"} keys %prefixmap)
 	. (%prefixmap ? "\n" : '')
 	. ($opts->{ask} ? "ASK" : "SELECT DISTINCT $select")
-	. " WHERE { $query } ORDER BY $select";
+	. " WHERE { $query }"
+	#. " ORDER BY $select" # Removed because of speed
+	;
 
 if ($cmdkey) {
 	my (@args, $cmd);
