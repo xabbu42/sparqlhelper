@@ -24,8 +24,10 @@ sparqlhelper [OPTIONS] QUERY
  --help,-h      Brief help message.
  --ask,-a       Use ask instead of select query.
  --explain,-e   Explain and log query execution.
- --data,-d      Data file to use (passed on to arq).
- --service,-s   Service endpoint to use (passed on to arq).
+ --data,-d      Data file to use (passed on to sparql).
+ --service,-r   Service endpoint to use (passed on to rsparql).
+ --loc,-l       TDB location to use (passed on to tdbquery).
+ --source,-s    Data source (can be a file with rdf data, a endpoint url or a tdb location)
  --prefix,-p    Add a prefix to the query in the form prefix=uri.
                 Known prefixes from prefix.cc are recognized instead 
                 of a uri.
@@ -42,7 +44,7 @@ use warnings;
 use v5.010;
 
 use Getopt::Long qw/:config/;
-use List::MoreUtils qw/uniq/;
+use List::Util qw/first/;
 use YAML;
 use Pod::Usage;
 use LWP::Simple qw/mirror/;
@@ -50,11 +52,28 @@ use LWP::Simple qw/mirror/;
 my $opts = {};
 GetOptions(
 	$opts,
-	'help|h', 'ask|a', 'data|d=s', 'service|s=s', 'prefix|p=s%', 'explain|e',
+	'help|h', 'ask|a', 'data|d=s', 'service|r=s', 'prefix|p=s%', 'explain|e', 'loc|l=s', 'source|s=s',
 	) or pod2usage(2);
 pod2usage() if $opts->{help};
+pod2usage("More than one data source given.")
+	if grep({$opts->{$_}} qw/data service loc source/) > 2;
+
+if ($opts->{source}) {
+	if (-d $opts->{source}) {
+		$opts->{loc} = $opts->{source};
+	} elsif (-f $opts->{source}) {
+		$opts->{data} = $opts->{source};
+	} elsif ($opts->{source} =~ m|^http://|) {
+		$opts->{service} = $opts->{source};
+	} else {
+		pod2usage("Can not use given source.");
+	}
+	delete $opts->{source};
+}
 
 my $query = shift // pod2usage(2);
+my %cmds = qw/data sparql service rsparql loc tdbquery/;
+my $cmdkey = first {$opts->{$_}} keys %cmds;
 
 my %prefixmap;
 my $path = $ENV{HOME} . '/.sparqlhelper.prefix.cc';
@@ -67,7 +86,7 @@ while (@matches) {
 }
 
 my @vars = ($query =~ m/\?\w+/g);
-if (!$opts->{data} && !$opts->{service}) {
+if (!$cmdkey) {
 	my %used = map {s/://; $_ => 1} ($query =~ m/\b\w+:/g);
 	foreach my $key (keys %prefixmap) {
 		delete $prefixmap{$key} unless $used{$key};
@@ -85,13 +104,11 @@ my $result =
 	. ($opts->{ask} ? "ASK" : "SELECT DISTINCT $select")
 	. " WHERE { $query } ORDER BY $select";
 
-if ($opts->{data} || $opts->{service}) {
-	my @args;
-	foreach my $key (qw/data service/) {
-		push @args, '--' . $key, $opts->{$key} if $opts->{$key};
-	}
+if ($cmdkey) {
+	my (@args, $cmd);
+	push @args, '--' . $cmdkey, $opts->{$cmdkey};
 	push @args, '--explain' if $opts->{explain};
-	exec($opts->{service} ? 'rsparql' : 'sparql', @args, $result);
+	exec($cmds{$cmdkey}, @args, $result);
 } else {
 	say $result;
 }
