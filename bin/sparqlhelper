@@ -89,7 +89,7 @@ if ($opts->{data} || $opts->{service}) {
 	foreach my $key (qw/data service/) {
 		push @args, '--' . $key, $opts->{$key} if $opts->{$key};
 	}
-	system('arq', @args, $result);
+	system($opts->{service} ? 'rsparql' : 'sparql', @args, $result);
 } else {
 	say $result;
 }
