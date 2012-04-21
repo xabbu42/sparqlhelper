@@ -25,4 +25,4 @@ If you want to install sparqlhelper manually you can use the following commands:
 Usage
 -----
 
-See `sparqlhelper -h` and `man sparqlhelper` for the documentation.
+See the [manpage](blob/master/Manpage.md) for the documentation.
